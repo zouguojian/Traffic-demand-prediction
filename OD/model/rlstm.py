@@ -1,5 +1,6 @@
 # -- coding: utf-8 --
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 class rlstm(object):
     def __init__(self,batch_szie, layer_num=1,nodes=128,is_training=None):
         self.batch_size=batch_szie

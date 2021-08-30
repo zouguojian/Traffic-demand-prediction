@@ -1,6 +1,7 @@
 # -- coding: utf-8 --
 from gcn_model.inits import *
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def sparse_dropout(x, keep_prob, noise_shape):
@@ -99,6 +100,6 @@ class GraphConvolution():
         res_c = tf.layers.dense(inputs=inputs, units=self.output_dim, name=self.res_name, reuse=tf.AUTO_REUSE)
 
 
-        # return tf.add(x=self.act(output), y=res_c)
+        return tf.add(x=self.act(output), y=res_c)
 
-        return self.act(output)
+        # return self.act(output)

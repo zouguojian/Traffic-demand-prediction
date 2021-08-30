@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
 
-import tensorflow as tf
-tf.reset_default_graph()
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class cnn_lstm(object):
     def __init__(self, batch_size, predict_time,layer_num=1, nodes=128, placeholders=None):
@@ -17,7 +17,7 @@ class cnn_lstm(object):
         self.nodes=nodes
         self.placeholders=placeholders
         self.predict_time=predict_time
-        self.h=162
+        self.h=15
         self.w=3
         self.position_size=162
         self.features=5
@@ -67,7 +67,7 @@ class cnn_lstm(object):
         # nodes = cnn_shape[1] * cnn_shape[2] * cnn_shape[3]
         # reshaped = tf.reshape(max_pool3, [cnn_shape[0], nodes])
         '''shape is  : [batch size, site num, features, channel]'''
-        relu3=tf.reduce_mean(relu3,axis=2)
+        relu3=tf.reduce_mean(relu2,axis=3)
         print('relu3 shape is : ',relu3.shape)
 
         s=tf.layers.dense(inputs=relu3,units=128,activation=tf.nn.relu)
@@ -81,7 +81,7 @@ class cnn_lstm(object):
         '''
 
         def cell():
-            lstm_cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=self.nodes,reuse=tf.AUTO_REUSE)
+            lstm_cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=self.nodes)
             lstm_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=lstm_cell,output_keep_prob=1.0)
             return lstm_cell_
         self.e_mlstm=tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.layer_num)])
@@ -89,7 +89,7 @@ class cnn_lstm(object):
 
     def decoder(self):
         def cell():
-            lstm_cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=self.nodes,reuse=tf.AUTO_REUSE)
+            lstm_cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=self.nodes)
             lstm_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=lstm_cell,output_keep_prob=1.0-self.placeholders['dropout'])
             return lstm_cell_
         self.d_mlstm=tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.layer_num)])
@@ -101,7 +101,7 @@ class cnn_lstm(object):
         :return: shape is [batch size, time size, hidden size]
         '''
         # out put the store data
-        with tf.variable_scope('encoder', reuse=tf.AUTO_REUSE):
+        with tf.variable_scope('encoder_lstm'):
             self.ouputs, self.state = tf.nn.dynamic_rnn(cell=self.e_mlstm, inputs=inputs,initial_state=self.initial_state,dtype=tf.float32)
         return self.ouputs
 
@@ -117,7 +117,7 @@ class cnn_lstm(object):
 
 
         for i in range(self.predict_time):
-            with tf.variable_scope('decoder_lstm', reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('decoder_lstm'):
                 h_state, state = tf.nn.dynamic_rnn(cell=self.d_mlstm, inputs=h_state,
                                                    initial_state=self.initial_state, dtype=tf.float32)
                 self.initial_state = state

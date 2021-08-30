@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
 
-import tensorflow as tf
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 class lstm(object):
     def __init__(self,batch_size,predict_time,layer_num=1,nodes=128,placeholders=None):
         '''
@@ -65,16 +65,16 @@ class lstm(object):
         # # print('h_state shape is : ',h_state.shape)
         # self.initial_state=mlstm_cell.zero_state(self.batch_size,tf.float32)
         h=[]
-
+        initial_state=self.initial_state
         h_state=encoder_hs[:,-1,:]
         for i in range(self.predict_time):
             h_state = tf.expand_dims(input=h_state,axis=1)
 
             with tf.variable_scope('decoder_lstm', reuse=tf.AUTO_REUSE):
-                h_state, state = tf.nn.dynamic_rnn(cell=self.mlstm_cell, inputs=h_state,initial_state=self.initial_state,dtype=tf.float32)
+                h_state, state = tf.nn.dynamic_rnn(cell=self.mlstm_cell, inputs=h_state,initial_state=initial_state,dtype=tf.float32)
                 # h_state=tf.squeeze(h_state)
                 h_state=self.attention(h_t=h_state,encoder_hs=encoder_hs) # attention
-                self.initial_state=state
+                initial_state=state
 
                 results=tf.layers.dense(inputs=h_state,units=1,name='layer',reuse=tf.AUTO_REUSE)
             h.append(results)

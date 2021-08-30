@@ -1,6 +1,7 @@
 # -- coding: utf-8 --
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class gru(object):
     def __init__(self, batch_size, predict_time,layer_num=1, nodes=128, placeholders=None):
@@ -26,7 +27,7 @@ class gru(object):
         '''
 
         def cell():
-            gru_cell=tf.nn.rnn_cell.GRUCell(num_units=self.nodes,reuse=tf.AUTO_REUSE)
+            gru_cell=tf.nn.rnn_cell.GRUCell(num_units=self.nodes)
             gru_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=gru_cell,output_keep_prob=1.0)
             return gru_cell_
         self.e_mrnn=tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.layer_num)])
@@ -34,7 +35,7 @@ class gru(object):
 
     def decoder(self):
         def cell():
-            gru_cell=tf.nn.rnn_cell.GRUCell(num_units=self.nodes, reuse=tf.AUTO_REUSE)
+            gru_cell=tf.nn.rnn_cell.GRUCell(num_units=self.nodes)
             gru_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=gru_cell,output_keep_prob=1-self.placeholders['dropout'])
             return gru_cell_
         self.d_mrnn=tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.layer_num)])
@@ -46,7 +47,7 @@ class gru(object):
         :return: shape is [batch size, time size, hidden size]
         '''
         # out put the store data
-        with tf.variable_scope('encoder_gru', reuse=tf.AUTO_REUSE):
+        with tf.variable_scope('encoder_gru'):
             self.ouputs, self.state = tf.nn.dynamic_rnn(cell=self.e_mrnn, inputs=inputs,initial_state=self.e_initial_state,dtype=tf.float32)
         return self.ouputs
 
@@ -61,7 +62,7 @@ class gru(object):
         h_state = tf.expand_dims(input=h_state, axis=1)
 
         for i in range(self.predict_time):
-            with tf.variable_scope('decoder_gru', reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('decoder_gru'):
                 h_state, state = tf.nn.dynamic_rnn(cell=self.d_mrnn, inputs=h_state,
                                                    initial_state=self.d_initial_state, dtype=tf.float32)
                 self.initial_state = state

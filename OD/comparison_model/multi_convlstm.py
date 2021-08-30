@@ -1,6 +1,7 @@
 # -- coding: utf-8 --
 from comparison_model.convlstm import ConvLSTMCell
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class mul_convlstm(object):
     def __init__(self, batch, predict_time, shape=[162, 5], filters= 32 , kernel=[162, 2], layer_num=1, activation=tf.tanh, normalize=True, reuse=None):

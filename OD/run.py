@@ -30,7 +30,6 @@ from comparison_model.multi_convlstm import mul_convlstm
 
 import pandas as pd
 import scipy.sparse as sp
-import tensorflow as tf
 import numpy as np
 import model.decoder as decoder
 import matplotlib.pyplot as plt
@@ -41,6 +40,9 @@ import gcn_model.data_process as data_load
 import os
 import datetime
 import argparse
+import csv
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 tf.reset_default_graph()
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -51,7 +53,7 @@ class Model(object):
         self.para=para
         self.adj=self.adjecent()
         self.iterate = data_load.DataIterator(site_id=self.para.target_site_id,
-                                                is_training=True,
+                                                is_training=self.para.is_training,
                                                 time_size=self.para.input_length,
                                                 prediction_size=self.para.output_length,
                                                 data_divide=self.para.data_divide,
@@ -139,15 +141,6 @@ class Model(object):
             axis=2: numbers of the nodes
             axis=3: output feature size
             '''
-            # encoder_init=encoder_lstm.lstm(self.x,
-            #                                self.para.batch_size,
-            #                                self.para.hidden_layer,
-            #                                self.para.hidden_size,
-            #                                self.para.is_training)
-            #encoder_init=encodet_gru.gru(self.x_input,batch_size,encoder_layer,encoder_nodes,is_training)
-            # encoder_init=encoder_rnn.rnn(self.x_input,batch_size,encoder_layer,encoder_nodes,is_training)
-            # h_state=encoder_init.encoding()
-
             encoder_init=encoder.encoder(self.para.batch_size,
                                          self.para.hidden_layer,
                                          self.para.hidden_size,
@@ -160,6 +153,15 @@ class Model(object):
             h_states=tf.transpose(tf.concat(h_states,axis=0),perm=[1,2,0,3])
 
             print('h_states shape is : ', h_states.shape)
+
+            # encoder_init=encoder_lstm.lstm(self.x,
+            #                                self.para.batch_size,
+            #                                self.para.hidden_layer,
+            #                                self.para.hidden_size,
+            #                                self.para.is_training)
+            #encoder_init=encodet_gru.gru(self.x_input,batch_size,encoder_layer,encoder_nodes,is_training)
+            # encoder_init=encoder_rnn.rnn(self.x_input,batch_size,encoder_layer,encoder_nodes,is_training)
+            # h_state=encoder_init.encoding()
 
             #this step to presict the polutant concentration
             '''
@@ -530,7 +532,7 @@ class Model(object):
         self.saver=tf.train.Saver()
 
     def re_current(self, a, max, min):
-        return [round(float(num*(max-min)+min),3) for num in a]
+        return [num*(max-min)+min++0.1 for num in a]
 
     def run_epoch(self):
         '''
@@ -549,7 +551,7 @@ class Model(object):
         # '''
         for i in range(int((iterate.length //self.para.site_num * iterate.data_divide-(iterate.time_size + iterate.prediction_size))//iterate.window_step)
                        * self.para.epochs // self.para.batch_size):
-            x, label =self.sess.run(next_elements)
+            x, label, times =self.sess.run(next_elements)
 
             # Construct feed dictionary
             # features = sp.csr_matrix(x)
@@ -579,6 +581,9 @@ class Model(object):
         total_time = end_time - start_time
         print("Total running times is : %f" % total_time.total_seconds())
 
+    def eva_re_current(self, line, max, min):
+        return [[line_sub[i]*(max[i]-min[i])+min[i]+0.1 for i in range(len(line_sub))] for line_sub in line]
+
     def evaluate(self):
         '''
         :param para:
@@ -587,6 +592,7 @@ class Model(object):
         '''
         label_list = list()
         predict_list = list()
+        time_list=list()
 
         #with tf.Session() as sess:
         model_file = tf.train.latest_checkpoint(self.para.save_path)
@@ -603,7 +609,7 @@ class Model(object):
         for i in range(int((iterate_test.length // self.para.site_num
                             -iterate_test.length // self.para.site_num * iterate_test.data_divide
                             -(iterate_test.time_size + iterate_test.prediction_size))//iterate_test.prediction_size)// self.para.batch_size):
-            x, label =self.sess.run(next_)
+            x, label,times2 =self.sess.run(next_)
 
             # Construct feed dictionary
             # features = sp.csr_matrix(x)
@@ -616,11 +622,39 @@ class Model(object):
             pre = self.sess.run((self.pres), feed_dict=feed_dict)
             label_list.append(label)
             predict_list.append(pre)
+            time_list.append(times2)
+        
+        label_csv=label_list
+        predict_csv=predict_list
 
         label_list=np.reshape(np.array(label_list,dtype=np.float32),[-1, self.para.site_num, self.para.output_length]).transpose([1,0,2])
         predict_list=np.reshape(np.array(predict_list,dtype=np.float32),[-1, self.para.site_num, self.para.output_length]).transpose([1,0,2])
 
+        with open('results/test.csv','w')as f:
+            header1=['label-'+str(i+1) for i in range(self.para.output_length)]
+            header2=['predict-'+str(i+1) for i in range(self.para.output_length)]
+            headers=header1+header2
+            f_csv = csv.writer(f)
+            f_csv.writerow(headers)
+            label_csv=np.reshape(np.array(label_csv,dtype=np.float32),[-1, self.para.output_length])
+            predict_csv=np.reshape(np.array(predict_csv,dtype=np.float32),[-1, self.para.output_length])
+            
+            rows=np.concatenate([label_csv,predict_csv],axis=1)
+            rows=np.array([self.re_current(row_data,max,min) for row_data in rows],dtype=np.int32)
+            f_csv.writerows(rows)
+            f.close()
+        
+        with open('results/time.csv','w')as f:
+          time1=['time-'+str(i+1) for i in range(self.para.output_length)]
+          headers=time1
+          f_csv = csv.writer(f)
+          f_csv.writerow(headers)
+          rows=np.reshape(np.array(time_list),[-1, self.para.output_length,3])
 
+          rows = np.array([self.eva_re_current(row_data, iterate_test.max_list[1:4],iterate_test.min_list[1:4]) for row_data in rows],dtype=int)
+          f_csv.writerows(rows)
+          f.close()
+        
         if self.para.normalize:
             label_list = np.array([self.re_current(np.reshape(site_label, [-1]),max,min) for site_label in label_list],dtype=np.int32)
             predict_list = np.array([self.re_current(np.reshape(site_label, [-1]),max,min) for site_label in predict_list],dtype=np.int32)

@@ -1,6 +1,7 @@
 # -- coding: utf-8 --
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class mlrnn(object):
     def __init__(self, batch_size, predict_time,layer_num=1, nodes=128, placeholders=None):
@@ -18,6 +19,9 @@ class mlrnn(object):
         self.placeholders=placeholders
         self.multi_layers=162
 
+        self.glo_encoder()
+        self.glo_decoder()
+
     def encoder(self):
         '''
         :return:  shape is [batch size, time size, hidden size]
@@ -25,7 +29,7 @@ class mlrnn(object):
 
         def cell():
             lstm_cell=tf.nn.rnn_cell.BasicLSTMCell(num_units=self.nodes)
-            lstm_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=lstm_cell,output_keep_prob=1.0)
+            lstm_cell_=tf.nn.rnn_cell.DropoutWrapper(cell=lstm_cell,output_keep_prob=1-self.placeholders['dropout'])
             return lstm_cell_
         e_mlstm=tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.layer_num)])
         e_initial_state = e_mlstm.zero_state(self.batch_size, tf.float32)
@@ -40,6 +44,12 @@ class mlrnn(object):
         d_initial_state = d_mlstm.zero_state(self.batch_size, tf.float32)
         return d_mlstm,d_initial_state
 
+    def glo_decoder(self):
+      self.d_mlstm, self.d_initial_state = self.decoder()
+
+    def glo_encoder(self):
+      self.e_mlstm, self.e_initial_state=self.encoder()
+    
     def multi_encoding(self, inputs):
         '''
         :param inputs:
@@ -62,8 +72,8 @@ class mlrnn(object):
         '''
         # out put the store data
         with tf.variable_scope('global_encoder'):
-            e_mlstm, e_initial_state=self.decoder()
-            ouputs, state = tf.nn.dynamic_rnn(cell=e_mlstm, inputs=inputs,initial_state=e_initial_state,dtype=tf.float32)
+            # e_mlstm, e_initial_state=self.encoder()
+            ouputs, state = tf.nn.dynamic_rnn(cell=self.e_mlstm, inputs=inputs,initial_state=self.e_initial_state,dtype=tf.float32)
         return ouputs
 
     def mul_decoding(self,  encoder_hs, site):
@@ -75,16 +85,16 @@ class mlrnn(object):
         h = []
         h_state = encoder_hs[:, -1, :]
         h_state = tf.expand_dims(input=h_state, axis=1)
-
-        with tf.variable_scope('decoder_lstm_'+str(site)):
+        with tf.variable_scope('decoder_lstm_', reuse=tf.AUTO_REUSE):
+        # with tf.variable_scope('decoder_lstm_'+str(site)):
             d_mlstm, d_initial_state = self.decoder()
             for i in range(self.predict_time):
                 h_state, state = tf.nn.dynamic_rnn(cell=d_mlstm,
                                                    inputs=h_state,
                                                    initial_state=d_initial_state,
                                                    dtype=tf.float32)
-                self.initial_state = state
-                results = tf.layers.dense(inputs=tf.squeeze(h_state), units=1, name='layer', reuse=tf.AUTO_REUSE)
+                # d_initial_state = state
+                results = tf.layers.dense(inputs=tf.squeeze(h_state), units=1, name='layer')
                 h.append(results)
 
         return tf.squeeze(tf.transpose(tf.convert_to_tensor(h), [1, 2, 0]), axis=1)
@@ -100,13 +110,13 @@ class mlrnn(object):
         h_state = tf.expand_dims(input=h_state, axis=1)
 
         with tf.variable_scope('decoder_lstm'):
-            d_mlstm, d_initial_state = self.decoder()
+            # d_mlstm, d_initial_state = self.decoder()
             for i in range(self.predict_time):
-                h_state, state = tf.nn.dynamic_rnn(cell=d_mlstm,
+                h_state, state = tf.nn.dynamic_rnn(cell=self.d_mlstm,
                                                    inputs=h_state,
-                                                   initial_state=d_initial_state,
+                                                   initial_state=self.d_initial_state,
                                                    dtype=tf.float32)
-                self.initial_state = state
+                # self.d_initial_state = state
                 results = tf.layers.dense(inputs=tf.squeeze(h_state), units=1, name='layer', reuse=tf.AUTO_REUSE)
                 h.append(results)
 

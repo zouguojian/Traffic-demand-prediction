@@ -1,5 +1,6 @@
 # -- coding: utf-8 --
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class Normalization(object):
     def __init__(self,inputs,out_size,is_training=False):

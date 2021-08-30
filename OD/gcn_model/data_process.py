@@ -1,6 +1,7 @@
 # -- coding: utf-8 --
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 from gcn_model.data_read import *
 import argparse
@@ -98,8 +99,7 @@ class DataIterator():             #切记这里的训练时段和测试时段的
         '''
         para=self.para
         shape=self.data.values.shape
-
-        print('is_training is : ', self.is_training)
+        
         if self.is_training:
             low,high=0,int(shape[0]//para.site_num * self.data_divide)*para.site_num
         else:
@@ -112,7 +112,7 @@ class DataIterator():             #切记这里的训练时段和测试时段的
             time=self.data.values[low + self.time_size * para.site_num: low + self.time_size * para.site_num + self.prediction_size * para.site_num,1:4]
             time=np.concatenate([time[i * para.site_num:(i + 1) * para.site_num, :] for i in range(self.prediction_size)], axis=1)
             yield (np.array(self.data.values[low:low+self.time_size*para.site_num]),
-                   label)
+                   label,time)
             if self.is_training: low += self.window_step*para.site_num
             else:low+=self.prediction_size*para.site_num
         return
@@ -135,7 +135,7 @@ class DataIterator():             #切记这里的训练时段和测试时段的
 
         return iterator.get_next()
 
-
+        
 def re_current(line, max, min):
     return [[line_sub[i]*(max[i]-min[i])+min[i]+0.1 for i in range(len(line_sub))] for line_sub in line]
 #

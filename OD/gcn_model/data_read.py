@@ -2,11 +2,11 @@
 import pandas as pd
 import csv
 
-file_path=r'/Users/guojianzou/PycharmProjects/OD/data/Order_all.csv'
-save_path=r'/Users/guojianzou/PycharmProjects/OD/data/data_all.csv'
+file_path=r'data/Order_all.csv'
+save_path=r'data/data_all.csv'
 
-train_path=r'/Users/guojianzou/PycharmProjects/OD/data/train_data.csv'
-combine_path=r'/Users/guojianzou/PycharmProjects/OD/data/combine_data.csv'
+train_path=r'data/train_data.csv'
+combine_path=r'data/combine_data.csv'
 data_colum=["ZoneID","Area","Slon","Slat","Elon","Elat","day","hour","min","second"]
 
 def data_save(file_path,save_pave):

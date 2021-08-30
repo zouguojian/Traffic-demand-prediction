@@ -1,5 +1,6 @@
 # -- coding: utf-8 --
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
   """A LSTM cell with convolutions instead of multiplications.
@@ -51,9 +52,9 @@ class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
       f += tf.get_variable('W_cf', c.shape[1:]) * c
 
     if self._normalize:
-      j = tf.contrib.layers.layer_norm(j)
-      i = tf.contrib.layers.layer_norm(i)
-      f = tf.contrib.layers.layer_norm(f)
+      j = tf.layers.batch_normalization(j, training=self._normalize)
+      i = tf.layers.batch_normalization(i, training=self._normalize)
+      f = tf.layers.batch_normalization(f, training=self._normalize)
 
     f = tf.sigmoid(f + self._forget_bias)
     i = tf.sigmoid(i)
@@ -63,8 +64,8 @@ class ConvLSTMCell(tf.nn.rnn_cell.RNNCell):
       o += tf.get_variable('W_co', c.shape[1:]) * c
 
     if self._normalize:
-      o = tf.contrib.layers.layer_norm(o)
-      c = tf.contrib.layers.layer_norm(c)
+      o = tf.layers.batch_normalization(o, training=self._normalize)
+      c = tf.layers.batch_normalization(c, training=self._normalize)
 
     o = tf.sigmoid(o)
     h = o * self._activation(c)
