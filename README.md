@@ -39,6 +39,7 @@ Deep learning methods, including O-STEDN and baselines, the HyperParameters sett
 static methods, including HA and ARIMA, the HyperParameters setting as followings:
 
 HA, historical experience data at the same time every day length we used is 7 days.
+
 ARIMA, the parameters p, d and q values we used can selected from the followings:
     # p_values = [1, 2, 4, 6]
     # d_values = range(0, 3)
