@@ -24,4 +24,4 @@ meteorological data. The model combines the two features to achieve a spatiotemp
   and achieved satisfactory performance, with the average RMSE value able to reach 22.927 even 
   for 1- to 15-hours prediction tasks.  
 
-> code link [click](https://github.com/zouguojian/Traffic-demand-prediction/tree/main/OD)
+> code link: [click](https://github.com/zouguojian/Traffic-demand-prediction/tree/main/OD)
